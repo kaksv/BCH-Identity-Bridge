@@ -1,8 +1,9 @@
 
 "use client";
 
-import { useState } from "react";
-import { connectPaytaca } from "../lib/paytaca";
+import { useState, useEffect } from "react";
+import { publicKeyToTokenAwareBchAddress } from "../lib/bch-address";
+import type { Event as NostrEvent } from "nostr-tools";
 import {
   useWizardConnect,
   WizardConnectQRDialog,
@@ -20,12 +21,21 @@ import {
   Wallet,
   Zap,
 } from "lucide-react";
+import {
+  createBindingChallenge,
+  challengeToMessage,
+  verifyNostrBinding,
+  type SignedBinding,
+} from "../lib/binding";
 
 
 type Identity = "bch" | "nostr";
 
 type NostrProvider = {
   getPublicKey: () => Promise<string>;
+  signEvent: (
+    event: Omit<NostrEvent, "id" | "sig" | "pubkey">
+  ) => Promise<NostrEvent>;
 };
 
 declare global {
@@ -42,17 +52,51 @@ export default function Home() {
   );
   const [proof, setProof] = useState("");
   const [notice, setNotice] = useState("");
-
-
-  const [pairingUri, setPairingUri] = useState("");
-const [walletSession, setWalletSession] = useState("");
-const [connectingBCH, setConnectingBCH] = useState(false);
-const wizard = useWizardConnect({
-  dappName: "BCH Identity Bridge",
-});
-
+  const wizard = useWizardConnect({
+    dappName: "BCH Identity Bridge",
+  });
   const bchConnected = wizard.state === "connected";
- const connected = bchConnected && Boolean(bch && nostr);
+  const connected = bchConnected && Boolean(bch && nostr);
+  const [signedBinding, setSignedBinding] = useState<SignedBinding | null>(null);
+
+
+
+useEffect(() => {
+  if (wizard.state !== "connected" || !wizard.manager) {
+    return;
+  }
+
+  try {
+    // Receive branch 0, address index 1.
+    const publicKey = wizard.manager.getPubkey(
+      0,
+      BigInt(1)
+    );
+
+    if (!publicKey) {
+      throw new Error("Wallet public key is unavailable.");
+    }
+
+    const address =
+      publicKeyToTokenAwareBchAddress(publicKey);
+
+    // Schedule the state update outside the synchronous effect body.
+    queueMicrotask(() => {
+      setBch(address);
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Unable to derive BCH address.";
+
+    queueMicrotask(() => {
+      setBch("");
+      setNotice(`BCH address derivation failed: ${message}`);
+    });
+  }
+}, [wizard.state, wizard.manager]);
+
 
 async function connectIdentity(type: Identity) {
   setNotice("");
@@ -62,8 +106,6 @@ async function connectIdentity(type: Identity) {
   wizard.connect();
   return;
 }
-
-
 
   try {
     if (!window.nostr) {
@@ -98,6 +140,58 @@ async function connectIdentity(type: Identity) {
       setNotice("Clipboard access is unavailable.");
     }
   }
+
+
+async function createIdentityBinding() {
+  try {
+    setNotice("");
+
+    if (!bch || !nostr || !window.nostr) {
+      throw new Error("Connect both identities first.");
+    }
+
+    const challenge = createBindingChallenge(bch, nostr);
+
+    const unsignedEvent = {
+      kind: 1,
+      created_at: Math.floor(Date.now() / 1000),
+      tags: [
+        ["t", "bch-identity-bridge"],
+        ["bch", bch],
+      ],
+      content: challengeToMessage(challenge),
+    };
+
+    const nostrEvent = await window.nostr.signEvent(
+      unsignedEvent
+    );
+
+    const binding: SignedBinding = {
+      challenge,
+      nostrEvent,
+      bchSignature: null,
+      status: "pending-bch-signature",
+    };
+
+    if (!verifyNostrBinding(binding)) {
+      throw new Error("Nostr signature verification failed.");
+    }
+
+    setSignedBinding(binding);
+    setProof(JSON.stringify(binding, null, 2));
+
+    setNotice(
+      "Nostr signature verified. BCH ownership signature is still required."
+    );
+  } catch (error) {
+    setNotice(
+      error instanceof Error
+        ? error.message
+        : "Unable to create identity binding."
+    );
+  }
+}
+
 
   return (
     <main className="min-h-screen bg-[#080c16] text-white">
@@ -240,54 +334,6 @@ async function connectIdentity(type: Identity) {
   </p>
 )}
 
-
-{pairingUri && (
-  <div className="mb-6 rounded-2xl border border-emerald-400/20 bg-[#111827] p-6">
-    <h3 className="mb-3 text-lg font-semibold">
-      Connect Paytaca Wallet
-    </h3>
-
-    <p className="mb-4 text-sm text-slate-400">
-      Open WalletConnect in your Paytaca extension,
-      choose the URI option, paste this connection URI,
-      and approve the request.
-    </p>
-
-    <textarea
-      readOnly
-      value={pairingUri}
-      rows={4}
-      className="w-full rounded-xl border border-white/10 bg-[#080c16] p-3 font-mono text-xs"
-    />
-
-    <button
-      onClick={() => copyText(pairingUri)}
-      className="mt-3 rounded-xl bg-emerald-400 px-5 py-3 font-semibold text-black"
-    >
-      Copy WalletConnect URI
-    </button>
-
-    {connectingBCH && (
-      <p className="mt-3 text-sm text-amber-300">
-        Waiting for Paytaca approval...
-      </p>
-    )}
-  </div>
-)}
-
-{walletSession && (
-  <div className="mb-6 rounded-2xl border border-white/10 bg-[#111827] p-6">
-    <h3 className="mb-3 font-semibold">
-      Approved WalletConnect Session
-    </h3>
-
-    <pre className="overflow-x-auto whitespace-pre-wrap break-all text-xs text-slate-300">
-      {walletSession}
-    </pre>
-  </div>
-)}
-
-
         {activeTab === "identity" ? (
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="space-y-5 lg:col-span-2">
@@ -300,6 +346,7 @@ async function connectIdentity(type: Identity) {
                   isConnected={bchConnected}
                   onConnect={() => {
                     if (bchConnected) {
+                      setBch("");
                       void wizard.disconnect();
                     } else {
                       void connectIdentity("bch");
@@ -334,8 +381,8 @@ async function connectIdentity(type: Identity) {
 
                 <div className="mb-6 space-y-4">
                   <StatusRow
-                    label="BCH wallet connected"
-                    complete={Boolean(bch)}
+                    label="BCH address available"
+                    complete={bchConnected && Boolean(bch)}
                   />
                   <StatusRow
                     label="Nostr identity connected"
@@ -343,7 +390,7 @@ async function connectIdentity(type: Identity) {
                   />
                   <StatusRow
                     label="Dual-signature proof generated"
-                    complete={false}
+                    complete={Boolean(signedBinding)}
                   />
                   <StatusRow
                     label="Proof published to Nostr"
@@ -353,8 +400,7 @@ async function connectIdentity(type: Identity) {
 
                 <button
                   disabled={!connected}
-                  onClick={() =>
-                    setNotice("Cryptographic binding is not implemented yet.")
+                  onClick={() => void createIdentityBinding()
                   }
                   className="w-full rounded-xl bg-emerald-400 px-5 py-3 font-semibold text-black transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-slate-500"
                 >

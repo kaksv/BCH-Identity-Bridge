@@ -9,12 +9,14 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@bitauth/libauth": "^3.0.0",
     "@walletconnect/sign-client": "^2.26.0",
     "@wizardconnect/core": "^0.2.11",
     "@wizardconnect/dapp": "^0.2.8",
     "@wizardconnect/react": "^0.2.7",
     "lucide-react": "^1.77.0",
     "next": "16.4.6",
+    "nostr-tools": "^2.26.1",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
