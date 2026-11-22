@@ -271,6 +271,16 @@ export default function Home() {
               <Code2 size={20} />
             </a>
             <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs text-amber-300">
+                        <a
+              href="https://github.com/kaksv/BCH-Identity-Bridge"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="GitHub"
+              className="text-slate-400 hover:text-white"
+            >
+            https://youtu.be/Th0BiSy5WD0  
+            </a>
+            
               MVP Preview
             </span>
           </div>
