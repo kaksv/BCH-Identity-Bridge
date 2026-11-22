@@ -44,6 +44,22 @@ declare global {
   }
 }
 
+export const metadata = {
+  title: "BCH Identity Bridge | Bitcoin Cash × Nostr",
+  description:
+    "Connect Bitcoin Cash and Nostr identities, create signed identity claims, and independently verify Nostr attestations.",
+  applicationName: "BCH Identity Bridge",
+  keywords: [
+    "Bitcoin Cash",
+    "BCH",
+    "Nostr",
+    "Decentralized Identity",
+    "Paytaca",
+    "WizardConnect",
+    "Identity Attestation",
+  ],
+};
+
 export default function Home() {
   const [bch, setBch] = useState("");
   const [nostr, setNostr] = useState("");
@@ -61,7 +77,7 @@ export default function Home() {
 
 
 
-useEffect(() => {
+ useEffect(() => {
   if (wizard.state !== "connected" || !wizard.manager) {
     return;
   }
@@ -95,17 +111,17 @@ useEffect(() => {
       setNotice(`BCH address derivation failed: ${message}`);
     });
   }
-}, [wizard.state, wizard.manager]);
+ }, [wizard.state, wizard.manager]);
 
 
-async function connectIdentity(type: Identity) {
+ async function connectIdentity(type: Identity) {
   setNotice("");
 
   if (type === "bch") {
   setNotice("Opening WizardConnect. Connect using Paytaca.");
   wizard.connect();
   return;
-}
+ }
 
   try {
     if (!window.nostr) {
@@ -129,7 +145,7 @@ async function connectIdentity(type: Identity) {
 
     setNotice(`Nostr connection failed: ${message}`);
   }
-}
+ }
 
   async function copyText(value: string) {
     if (!value) return;
@@ -141,7 +157,7 @@ async function connectIdentity(type: Identity) {
     }
   }
 
-function downloadBindingProof() {
+ function downloadBindingProof() {
   if (!signedBinding) {
     setNotice("Create a signed binding first.");
     return;
@@ -163,9 +179,9 @@ function downloadBindingProof() {
   anchor.remove();
 
   URL.revokeObjectURL(url);
-}
+ }
 
-async function createIdentityBinding() {
+ async function createIdentityBinding() {
   try {
     setNotice("");
 
@@ -213,9 +229,9 @@ async function createIdentityBinding() {
         : "Unable to create identity binding."
     );
   }
-}
+ }
 
-function verifyImportedProof() {
+ function verifyImportedProof() {
   try {
     const parsed: unknown = JSON.parse(proof);
 
@@ -234,8 +250,8 @@ function verifyImportedProof() {
 
     setNotice(
       valid
-        ? "Nostr signature verified. BCH ownership remains unverified."
-        : "Proof verification failed."
+        ? "Nostr attestation verified successfully. The signed claim has not been modified. BCH address ownership remains unverified."
+        : "Verification failed. The Nostr signature is invalid, the proof has expired, or the signed claim has been modified."
     );
   } catch (error) {
     setNotice(
@@ -244,7 +260,7 @@ function verifyImportedProof() {
         : "Invalid proof."
     );
   }
-}
+ }
 
 
   return (
@@ -262,7 +278,7 @@ function verifyImportedProof() {
 
           <div className="flex items-center gap-5">
             <a
-              href="https://github.com"
+              href="https://github.com/kaksv/BCH-Identity-Bridge"
               target="_blank"
               rel="noreferrer"
               aria-label="GitHub"
@@ -283,18 +299,18 @@ function verifyImportedProof() {
           Self-sovereign identity for Bitcoin Cash + Nostr
         </div>
 
-        <h1 className="max-w-3xl text-4xl font-bold tracking-tight sm:text-6xl">
+        <h2 className="max-w-3xl text-4xl font-bold tracking-tight sm:text-6xl">
           One identity.
-          <br />
+          {/* <br /> */}
           Two networks.
-          <br />
+          {/* <br /> */}
           <span className="text-emerald-400">Verifiable trust.</span>
-        </h1>
+        </h2>
 
         <p className="mt-6 max-w-2xl text-lg leading-relaxed text-slate-400">
-          Connect your Bitcoin Cash and Nostr identities, create a
-          cryptographic proof of ownership, and make your identity
-          verifiable across decentralized applications.
+          Connect your Bitcoin Cash wallet through Paytaca and your Nostr identity through a compatible browser extension. Generate a unique binding challenge and sign it using your Nostr identity.
+
+          Your signed claim can be exported and independently verified. BCH ownership verification is planned for a future release.
         </p>
 
         <div className="mt-8 flex flex-wrap gap-3">
@@ -443,8 +459,16 @@ function verifyImportedProof() {
                     complete={bchConnected && Boolean(bch)}
                   />
                   <StatusRow
+                    label="BCH address retrieved"
+                    complete={Boolean(bch)}
+                  />
+                  <StatusRow
                     label="Nostr identity connected"
                     complete={Boolean(nostr)}
+                  />
+                  <StatusRow
+                    label="Nostr signature verified"
+                    complete={Boolean(signedBinding)}
                   />
                   <StatusRow
                     label="Dual-signature proof generated"
@@ -454,7 +478,16 @@ function verifyImportedProof() {
                     label="Proof published to Nostr"
                     complete={false}
                   />
+                  <StatusRow
+                    label="BCH ownership verified (coming soon)"
+                    complete={false}
+                  />
+                  <StatusRow
+                    label="Dual-signature proof complete (coming soon)"
+                    complete={false}
+                  />
                 </div>
+
 
                 <button
                   disabled={!connected}
@@ -522,9 +555,9 @@ function verifyImportedProof() {
             </div>
 
             <p className="mb-6 text-sm leading-relaxed text-slate-400">
-              Paste a BCH Identity Bridge proof to verify both
-              cryptographic signatures. The verification engine will
-              be connected in the next development stage.
+              Verify a previously generated BCH–Nostr identity claim. Paste the exported JSON proof to validate its Nostr signature, confirm the signed challenge has not been altered, and check its expiration.
+
+              This verifies the Nostr attestation only. Independent BCH ownership verification is not yet supported.
             </p>
 
             <label
