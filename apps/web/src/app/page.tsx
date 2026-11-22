@@ -309,13 +309,6 @@ function verifyImportedProof() {
           >
             Create Identity <ArrowRight size={18} />
           </button>
-
-          <button
-            onClick={verifyImportedProof}
-            className="rounded-xl border border-white/15 px-6 py-3 font-medium hover:bg-white/5"
-          >
-            Verify a Proof
-          </button>
           <button
             type="button"
             disabled={!signedBinding}
@@ -324,6 +317,14 @@ function verifyImportedProof() {
           >
             Download Binding Proof
           </button>
+
+          <button
+            onClick={verifyImportedProof}
+            className="rounded-xl border border-white/15 px-6 py-3 font-medium hover:bg-white/5"
+          >
+            Verify a Proof
+          </button>
+
         </div>
       </section>
 
