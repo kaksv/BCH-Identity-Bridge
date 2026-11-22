@@ -2,10 +2,20 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
-export const metadata: Metadata = {
-  title: "BCH Identity Bridge | Self-Sovereign Identity",
+export const metadata = {
+  title: "BCH Identity Bridge | Bitcoin Cash × Nostr",
   description:
-    "Cryptographically connect Bitcoin Cash and Nostr identities. One identity. Two networks. Verifiable trust.",
+    "Connect Bitcoin Cash and Nostr identities, create signed identity claims, and independently verify Nostr attestations.",
+  applicationName: "BCH Identity Bridge",
+  keywords: [
+    "Bitcoin Cash",
+    "BCH",
+    "Nostr",
+    "Decentralized Identity",
+    "Paytaca",
+    "WizardConnect",
+    "Identity Attestation",
+  ],
 };
 
 export default function RootLayout({

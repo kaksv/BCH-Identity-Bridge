@@ -44,22 +44,6 @@ declare global {
   }
 }
 
-export const metadata = {
-  title: "BCH Identity Bridge | Bitcoin Cash × Nostr",
-  description:
-    "Connect Bitcoin Cash and Nostr identities, create signed identity claims, and independently verify Nostr attestations.",
-  applicationName: "BCH Identity Bridge",
-  keywords: [
-    "Bitcoin Cash",
-    "BCH",
-    "Nostr",
-    "Decentralized Identity",
-    "Paytaca",
-    "WizardConnect",
-    "Identity Attestation",
-  ],
-};
-
 export default function Home() {
   const [bch, setBch] = useState("");
   const [nostr, setNostr] = useState("");
