@@ -141,6 +141,29 @@ async function connectIdentity(type: Identity) {
     }
   }
 
+function downloadBindingProof() {
+  if (!signedBinding) {
+    setNotice("Create a signed binding first.");
+    return;
+  }
+
+  const blob = new Blob(
+    [JSON.stringify(signedBinding, null, 2)],
+    { type: "application/json" }
+  );
+
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+
+  anchor.href = url;
+  anchor.download = `bch-identity-proof-${signedBinding.challenge.nonce}.json`;
+
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+
+  URL.revokeObjectURL(url);
+}
 
 async function createIdentityBinding() {
   try {
@@ -188,6 +211,37 @@ async function createIdentityBinding() {
       error instanceof Error
         ? error.message
         : "Unable to create identity binding."
+    );
+  }
+}
+
+function verifyImportedProof() {
+  try {
+    const parsed: unknown = JSON.parse(proof);
+
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !("challenge" in parsed) ||
+      !("nostrEvent" in parsed)
+    ) {
+      throw new Error("Invalid proof format.");
+    }
+
+    const valid = verifyNostrBinding(
+      parsed as SignedBinding
+    );
+
+    setNotice(
+      valid
+        ? "Nostr signature verified. BCH ownership remains unverified."
+        : "Proof verification failed."
+    );
+  } catch (error) {
+    setNotice(
+      error instanceof Error
+        ? error.message
+        : "Invalid proof."
     );
   }
 }
@@ -257,15 +311,18 @@ async function createIdentityBinding() {
           </button>
 
           <button
-            onClick={() => {
-              setActiveTab("verify");
-              document.getElementById("workspace")?.scrollIntoView({
-                behavior: "smooth",
-              });
-            }}
+            onClick={verifyImportedProof}
             className="rounded-xl border border-white/15 px-6 py-3 font-medium hover:bg-white/5"
           >
             Verify a Proof
+          </button>
+          <button
+            type="button"
+            disabled={!signedBinding}
+            onClick={downloadBindingProof}
+            className="rounded-xl border border-white/20 px-5 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Download Binding Proof
           </button>
         </div>
       </section>
